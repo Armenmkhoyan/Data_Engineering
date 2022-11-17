@@ -1,0 +1,4 @@
+## Task_1
+#### Task 1. Figure out all possible event types.
+#### Task 2. Visualize videos like rate (likes count to time dashboard).
+#### Task 3. Figure out how often each person views videos with at least one tag that is the same as one from user categories. So you should count when some user with some categories in his profile (user categories: cute, travel) watches some video with some tags attached to it (video tags: travel, mountains) and there is at least one similar tag and category (in this example the "travel" is common). Calculate per user both: how many times there was a common tag/category, and how many times there was not.You can come up with additional use cases and implement them.
