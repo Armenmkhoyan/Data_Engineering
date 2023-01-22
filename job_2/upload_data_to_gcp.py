@@ -1,12 +1,10 @@
+import logging
 import os
 
 from google.cloud import storage
 
 from logger import my_logger
-
-os.environ[
-    "GOOGLE_APPLICATION_CREDENTIALS"
-] = "data-n-analytics-edu-345714-658a4f6e1c6d.json"
+from spark_based_functions import get_files_by_extension
 
 os.environ[
     "GOOGLE_APPLICATION_CREDENTIALS"
@@ -17,9 +15,9 @@ LOCAL_FOLDER = "data"
 
 
 class GCStorage:
-    def __init__(self, storage_client, logger):
+    def __init__(self, logger: logging):
         self.logger = logger
-        self.client = storage_client
+        self.client = storage.Client()
         self.logger.info("Creating GCP object")
 
     def create_bucket(
@@ -46,29 +44,28 @@ class GCStorage:
         buckets = self.client.list_buckets()
         return bucket in [bucket.name for bucket in buckets]
 
-    def upload_file(self, bucket: storage.bucket, folder: str, file_name: str) -> None:
+    def upload_files(self, bucket: storage.bucket, files: list, by_folder: bool = False) -> None:
 
-        self.logger.info("Uploading file to bucket")
-        file_to_upload = os.path.join(folder, file_name)
-        blob = bucket.blob(file_name)
-        blob.upload_from_filename(file_to_upload)
+        self.logger.info("Uploading files to bucket")
+
+        for file in files:
+            if by_folder:
+                dirname = os.path.basename(os.path.dirname(file))
+                file_name = os.path.basename(file)
+                blob_name = os.path.join(dirname, file_name)
+            else:
+                blob_name = os.path.basename(file)
+
+            blob = bucket.blob(blob_name)
+            blob.upload_from_filename(file)
 
 
 def main():
     logger = my_logger()
-    storage_client = storage.Client()
-    gcs = GCStorage(storage_client, logger)
+    gcs = GCStorage(logger)
     bucket = gcs.create_bucket(BUCKET_NAME)
-
-    logger.info("Getting all files from directory to be uploaded ")
-    files = [
-        f
-        for f in os.listdir(LOCAL_FOLDER)
-        if os.path.isfile(os.path.join(LOCAL_FOLDER, f))
-    ]
-
-    for file in files:
-        gcs.upload_file(bucket, LOCAL_FOLDER, file)
+    files = get_files_by_extension(LOCAL_FOLDER, logger, "json", "csv", "jsonl")
+    gcs.upload_files(bucket, files)
 
 
 if __name__ == "__main__":

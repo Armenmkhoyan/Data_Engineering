@@ -3,11 +3,12 @@ from urllib.parse import urlparse
 
 import pandas as pd
 from google.cloud import storage
+from pandas import DataFrame
 
-file_name = "videos.csv"
-valid_data = "valid_data"
-invalid_data = "invalid_data"
-bucket_for_processed_data = "processed_data_job_2"
+FILE_NAME = "videos.csv"
+VALID_DATA = "valid_data"
+INVALID_DATA = "invalid_data"
+BUCKET_FOR_PROCESSED_DATA = "processed_data_job_2"
 
 
 def process_data(event, context):
@@ -15,22 +16,22 @@ def process_data(event, context):
     client = storage.Client()
     bucket = client.bucket(bucket_name)
 
-    gcs_file = bucket.get_blob(file_name)
+    gcs_file = bucket.get_blob(FILE_NAME)
 
     file_contents = gcs_file.download_as_string().decode("utf-8").splitlines()
     valid_df, invalid_df = process_file(file_contents)
 
-    bucket_for_processed = create_bucket(client, bucket_for_processed_data)
+    bucket_for_processed = get_bucket(client, BUCKET_FOR_PROCESSED_DATA)
 
-    save_dataframe(valid_df, bucket_for_processed, valid_data)
-    save_dataframe(invalid_df, bucket_for_processed, invalid_data)
+    save_dataframe(valid_df, bucket_for_processed, VALID_DATA)
+    save_dataframe(invalid_df, bucket_for_processed, INVALID_DATA)
 
 
-def process_file(file):
+def process_file(file_contents: list) -> tuple[DataFrame, DataFrame]:
     temp_for_valid = []
     temp_for_invalid = []
 
-    reader = csv.DictReader(file)
+    reader = csv.DictReader(file_contents)
     for line in reader:
         if validate_line(line):
             temp_for_valid.append(line)
@@ -43,7 +44,7 @@ def process_file(file):
     return valid_df, invalid_df
 
 
-def validate_line(line):
+def validate_line(line: dict):
     return all(
         [
             validate_url(line["url"]),
@@ -54,7 +55,7 @@ def validate_line(line):
     )
 
 
-def validate_url(url):
+def validate_url(url: str) -> bool:
     try:
         result = urlparse(url)
         return all([result.scheme, result.netloc])
@@ -62,27 +63,31 @@ def validate_url(url):
         return False
 
 
-def is_digit(text):
+def is_digit(text: str) -> bool:
     return text.isdigit()
 
 
-def save_dataframe(df, bucket, file_name):
+def save_dataframe(df: DataFrame, bucket: storage.Bucket, file_name: str):
     df.to_parquet(f"/tmp/{file_name}.parquet", index=False)
     blob = bucket.blob(f"{file_name}.parquet")
     blob.upload_from_filename(f"/tmp/{file_name}.parquet")
 
 
-def create_bucket(client, bucket_name, location="US"):
-
-    if not is_bucket_exist(client, bucket_name):
-        try:
-            return client.create_bucket(
-                bucket_name, location=location, requester_pays=False
-            )
-        except Exception as ex:
-            print("An error occurred: %s", ex)
+def get_bucket(client: storage.Client, bucket_name: str) -> storage.Bucket:
+    if is_bucket_exist(client, bucket_name):
+        return client.get_bucket(bucket_name)
+    return create_bucket(client, bucket_name)
 
 
-def is_bucket_exist(client, bucket_name):
+def create_bucket(client: storage.Client, bucket_name: str, location: str = "US") -> storage.Bucket:
+    try:
+        return client.create_bucket(
+            bucket_name, location=location, requester_pays=False
+        )
+    except Exception as ex:
+        print("An error occurred: %s", ex)
+
+
+def is_bucket_exist(client: storage.Client, bucket_name: str) -> bool:
     buckets = client.list_buckets()
     return bucket_name in [bucket.name for bucket in buckets]
