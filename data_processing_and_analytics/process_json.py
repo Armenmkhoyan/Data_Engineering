@@ -1,16 +1,19 @@
 import logging
+import os
 
-import pyspark.sql.types as t
+from google.cloud import storage
 from pyspark.sql import SparkSession
-from pyspark.sql import functions as f
-from pyspark.sql.functions import col
 
+from gcp_model import GCStorage
 from logger import my_logger
-from spark_based_functions import (dataframe_from_json, dataframe_to_parquet,
-                                   init_spark)
-from transform_functions import (convert_timestamp, del_elem_by_key,
-                                 set_element_to_none)
-from upload_data_to_gcp import GCStorage, get_files_by_extension
+from spark_processors import (clean_transform_df, dataframe_from_json,
+                              dataframe_to_parquet, get_files_by_extension,
+                              init_spark)
+from utils import convert_timestamp, del_elem_by_key, set_element_to_none
+
+os.environ[
+    "GOOGLE_APPLICATION_CREDENTIALS"
+] = "json_key/data-n-analytics-edu-345714-658a4f6e1c6d.json"
 
 BUCKET_NAME = "processed_parquet_job_2"
 LOCAL_FOLDER = "data"
@@ -21,28 +24,7 @@ PATH_TO_SAVE = "events"
 def events_processing_pipeline(spark: SparkSession, logger: logging):
     logger.info("Starts processing json")
     df = dataframe_from_json(spark, LOCAL_FOLDER, FILE_TO_PROCESS, logger)
-
-    logger.info("Creating new DF from multi lines, converting timestamp, filtering")
-    events_inner = (
-                    df.where(col("events").isNotNull())
-                    .select("events")
-                    .withColumn("events", f.explode("events"))
-                    .select("events.*")
-                    .withColumn("timestamp", col("timestamp").cast(t.TimestampType()))
-    )
-
-    logger.info("Filtering null elements, converting timestamp")
-    df = (
-            df.where(col("events").isNull())
-            .select("comment", "event", "tags", "timestamp", "user_id", "video_id")
-            .withColumn("timestamp", col("timestamp").cast(t.TimestampType()))
-    )
-
-    logger.info("Merging two dataframes")
-    df = df.unionByName(events_inner, allowMissingColumns=True)
-
-    df.show(truncate=False)
-
+    df = clean_transform_df(df, logger)
     dataframe_to_parquet(df, LOCAL_FOLDER, PATH_TO_SAVE, logger)
 
 
@@ -87,7 +69,9 @@ def events_processing_pipeline_rdd(spark: SparkSession, logger: logging):
 
 def main():
     logger = my_logger()
-    gcs = GCStorage(logger)
+    client = storage.Client()
+
+    gcs = GCStorage(client, logger)
     bucket = gcs.create_bucket(BUCKET_NAME)
 
     spark = init_spark()

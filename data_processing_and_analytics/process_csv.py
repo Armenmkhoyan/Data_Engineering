@@ -1,12 +1,19 @@
 import logging
+import os
 
+from google.cloud import storage
+from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, udf
 
+from gcp_model import GCStorage
 from logger import my_logger
-from pyspark.sql import SparkSession
-from spark_based_functions import dataframe_from_csv, dataframe_to_parquet, init_spark
-from transform_functions import is_valid_email, is_valid_text
-from upload_data_to_gcp import GCStorage, get_files_by_extension
+from spark_processors import (dataframe_from_csv, dataframe_to_parquet,
+                              get_files_by_extension, init_spark)
+from validators import is_valid_email, is_valid_text
+
+os.environ[
+    "GOOGLE_APPLICATION_CREDENTIALS"
+] = "json_key/data-n-analytics-edu-345714-658a4f6e1c6d.json"
 
 BUCKET_NAME = "processed_parquet_job_2"
 LOCAL_FOLDER = "data"
@@ -57,7 +64,9 @@ def users_processing_pipeline_rdd(spark: SparkSession, logger: logging):
 
 def main():
     logger = my_logger()
-    gcs = GCStorage(logger)
+    client = storage.Client()
+
+    gcs = GCStorage(client, logger)
     bucket = gcs.create_bucket(BUCKET_NAME)
 
     spark = init_spark()
@@ -70,4 +79,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

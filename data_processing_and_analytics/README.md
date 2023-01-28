@@ -1,6 +1,6 @@
 ### Spark-based Data Platform foundation
 #### Integration Job 1-3 will process Input Data and put it into GCS as Parquet files. Consider partitioning for Parquet files.
-
+#### [DWH Schema](https://dbdiagram.io/d/638269c7c9abfc6111755c94)
 * [upload_data_to_gcp ](./upload_data_to_gcp.py) - for create bucket and upload files to the cloud.
 
 1. Ingestion Job 1. GCP Cloud Function to read “videos” data, validate (move invalid records to separate file) and save to GCS as Parquet files. The Function should be triggered when new files land to GCS.

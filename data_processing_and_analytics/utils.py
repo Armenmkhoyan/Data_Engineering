@@ -1,5 +1,6 @@
-import re
 from datetime import datetime
+
+from dateutil.parser import ParserError, parse
 
 
 def del_elem_by_key(x: dict, key: str) -> dict:
@@ -12,15 +13,13 @@ def convert_timestamp(x: dict, key: str) -> dict:
     return x
 
 
+def parse_date(date: str) -> datetime:
+    try:
+        return parse(date, fuzzy=True)
+    except ParserError:
+        raise ValueError(f"{date} not a valid data")
+
+
 def set_element_to_none(x: dict, key: str) -> dict:
     x[key] = None
     return x
-
-
-def is_valid_text(text: str) -> bool:
-    return isinstance(text, str) and len(text) > 2 and text.replace(" ", "").isalpha()
-
-
-def is_valid_email(text: str) -> bool:
-    patt = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
-    return isinstance(text, str) and bool(re.match(patt, text))
