@@ -29,3 +29,7 @@ def is_validate_url(url: str) -> bool:
         return all([result.scheme, result.netloc])
     except:
         return False
+
+
+def is_element_of_list_in_text(texts: list[str], text: str) -> bool:
+    return any([elem.lower() in text.lower() for elem in texts])
