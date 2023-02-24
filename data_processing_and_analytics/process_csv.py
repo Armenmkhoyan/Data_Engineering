@@ -1,12 +1,10 @@
-import logging
 import os
 
-from google.cloud import storage
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, udf
 
 from gcp_model import GCStorage
-from logger import my_logger
+from logger import logger
 from spark_processors import (dataframe_from_csv, dataframe_to_parquet,
                               get_files_by_extension, init_spark)
 from validators import is_valid_email, is_valid_text
@@ -24,10 +22,10 @@ VALID_PARQUET_RDD_FOLDER = "valid_rdd"
 INVALID_PARQUET_RDD_FOLDER = "invalid_rdd"
 
 
-def users_processing_pipeline(spark: SparkSession, logger: logging):
+def users_processing_pipeline(spark: SparkSession):
 
     logger.info("Processing data")
-    df = dataframe_from_csv(spark, LOCAL_FOLDER, FILE_TO_PROCESS, logger)
+    df = dataframe_from_csv(spark, LOCAL_FOLDER, FILE_TO_PROCESS)
 
     logger.info("Check text and email validity")
     udf_validator = udf(lambda fname, lname, email:
@@ -38,13 +36,13 @@ def users_processing_pipeline(spark: SparkSession, logger: logging):
     valid_df = temp_df.filter(col("is_valid") == True).drop(col("is_valid"))
     invalid_df = temp_df.filter(col("is_valid") == False).drop(col("is_valid"))
 
-    dataframe_to_parquet(valid_df, LOCAL_FOLDER, VALID_PARQUET_FOLDER, logger)
-    dataframe_to_parquet(invalid_df, LOCAL_FOLDER, INVALID_PARQUET_FOLDER, logger)
+    dataframe_to_parquet(valid_df, LOCAL_FOLDER, VALID_PARQUET_FOLDER)
+    dataframe_to_parquet(invalid_df, LOCAL_FOLDER, INVALID_PARQUET_FOLDER)
 
 
-def users_processing_pipeline_rdd(spark: SparkSession, logger: logging):
+def users_processing_pipeline_rdd(spark: SparkSession):
     logger.info("Starting process data by rdd")
-    df = dataframe_from_csv(spark, LOCAL_FOLDER, FILE_TO_PROCESS, logger)
+    df = dataframe_from_csv(spark, LOCAL_FOLDER, FILE_TO_PROCESS)
 
     rdd_df = df.rdd
     src_schema = df.schema
@@ -58,20 +56,17 @@ def users_processing_pipeline_rdd(spark: SparkSession, logger: logging):
     invalid_rdd = mapped_rdd.filter(lambda x: not x[0]).map(lambda x: x[1])
     invalid_df = invalid_rdd.toDF(src_schema)
 
-    dataframe_to_parquet(valid_df, LOCAL_FOLDER, VALID_PARQUET_RDD_FOLDER, logger)
-    dataframe_to_parquet(invalid_df, LOCAL_FOLDER, INVALID_PARQUET_RDD_FOLDER, logger)
+    dataframe_to_parquet(valid_df, LOCAL_FOLDER, VALID_PARQUET_RDD_FOLDER)
+    dataframe_to_parquet(invalid_df, LOCAL_FOLDER, INVALID_PARQUET_RDD_FOLDER)
 
 
 def main():
-    logger = my_logger()
-    client = storage.Client()
-
-    gcs = GCStorage(client, logger)
+    gcs = GCStorage()
     bucket = gcs.create_bucket(BUCKET_NAME)
 
     spark = init_spark()
-    users_processing_pipeline(spark, logger)
-    users_processing_pipeline_rdd(spark, logger)
+    users_processing_pipeline(spark)
+    users_processing_pipeline_rdd(spark)
 
     parquet_files = get_files_by_extension(LOCAL_FOLDER, logger, "parquet")
     gcs.upload_files(bucket, parquet_files, by_folder=True)

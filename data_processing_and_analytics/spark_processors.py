@@ -1,5 +1,4 @@
 import glob
-import logging
 import os
 
 import pyspark.sql.functions as f
@@ -8,6 +7,7 @@ from pyspark.sql import DataFrame
 from pyspark.sql.functions import col, udf
 from pyspark.sql.session import SparkSession
 
+from logger import logger
 from validators import (is_digit, is_valid_address, is_valid_coordinate,
                         is_valid_email, is_valid_text, is_validate_url)
 
@@ -28,25 +28,25 @@ def init_spark() -> SparkSession:
     return SparkSession.builder.master("local[4]").getOrCreate()
 
 
-def dataframe_from_json(spark: SparkSession, path: str, file: str, logger: logging) -> DataFrame:
+def dataframe_from_json(spark: SparkSession, path: str, file: str) -> DataFrame:
     logger.info("Creating Dataframe from JSON")
     path = os.path.join(path, file)
     return spark.read.format("json").load(path)
 
 
-def dataframe_from_csv(spark: SparkSession, path: str, file: str, logger: logging) -> DataFrame:
+def dataframe_from_csv(spark: SparkSession, path: str, file: str) -> DataFrame:
     logger.info("Creating Dataframe from CSV")
     path = os.path.join(path, file)
     return spark.read.option("header", "true").format("csv").load(path).repartition(4)
 
 
-def dataframe_to_parquet(df: DataFrame, local_folder: str, dir_name: str, logger: logging):
+def dataframe_to_parquet(df: DataFrame, local_folder: str, dir_name: str):
     logger.info("Writing dataframe to parquet")
 
     df.coalesce(1).write.mode("overwrite").format("parquet").save(os.path.join(local_folder, dir_name))
 
 
-def get_files_by_extension(path: str, logger: logging, *args: str) -> list:
+def get_files_by_extension(path: str, *args: str) -> list:
     logger.info(f"Getting {args} files from directory")
     all_files = []
     for extension in args:
@@ -56,7 +56,7 @@ def get_files_by_extension(path: str, logger: logging, *args: str) -> list:
     return all_files
 
 
-def validate_dataframe(df: DataFrame, logger: logging) -> DataFrame:
+def validate_dataframe(df: DataFrame) -> DataFrame:
     logger.info("Validating Dataframe")
     fields_to_validate = {col_name: func for column in df.columns
                           for col_name, func in FIELDS_TO_VALIDATE.items() if column == col_name}
@@ -73,14 +73,14 @@ def validate_dataframe(df: DataFrame, logger: logging) -> DataFrame:
     return df
 
 
-def clean_transform_df(df: DataFrame, logger: logging) -> DataFrame:
-    df = unpack_nested_df(df, logger)
-    df = convert_timestamp(df, logger)
-    df = remove_none_rows(df, logger)
+def clean_transform_df(df: DataFrame) -> DataFrame:
+    df = unpack_nested_df(df)
+    df = convert_timestamp(df)
+    df = remove_none_rows(df)
     return df
 
 
-def convert_timestamp(df: DataFrame, logger: logging) -> DataFrame:
+def convert_timestamp(df: DataFrame) -> DataFrame:
     logger.info("Converting timestamp columns")
     timestamp_cols = [column for column, dtype in df.dtypes if column == "timestamp" and isinstance(dtype, str)]
     if timestamp_cols:
@@ -89,7 +89,7 @@ def convert_timestamp(df: DataFrame, logger: logging) -> DataFrame:
     return df
 
 
-def unpack_nested_df(df: DataFrame, logger: logging) -> DataFrame:
+def unpack_nested_df(df: DataFrame) -> DataFrame:
     logger.info("Unpacking nested dataframe")
     columns = _get_nested_columns(df)
     for column in columns:
@@ -98,7 +98,7 @@ def unpack_nested_df(df: DataFrame, logger: logging) -> DataFrame:
     return df
 
 
-def remove_none_rows(df: DataFrame, logger: logging) -> DataFrame:
+def remove_none_rows(df: DataFrame) -> DataFrame:
     logger.info("Removing rows with None values")
     return df.na.drop("all")
 

@@ -1,9 +1,7 @@
 import os
 
-from google.cloud import storage
-
 from gcp_model import GCStorage
-from logger import my_logger
+from logger import logger
 from spark_processors import get_files_by_extension
 
 os.environ[
@@ -15,9 +13,7 @@ LOCAL_FOLDER = "data"
 
 
 def main():
-    logger = my_logger()
-    client = storage.Client()
-    gcs = GCStorage(client, logger)
+    gcs = GCStorage()
     bucket = gcs.create_bucket(BUCKET_NAME)
     files = get_files_by_extension(LOCAL_FOLDER, logger, "json", "csv", "jsonl")
     gcs.upload_files(bucket, files)

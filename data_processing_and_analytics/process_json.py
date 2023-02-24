@@ -1,11 +1,9 @@
-import logging
 import os
 
-from google.cloud import storage
 from pyspark.sql import SparkSession
 
 from gcp_model import GCStorage
-from logger import my_logger
+from logger import logger
 from spark_processors import (clean_transform_df, dataframe_from_json,
                               dataframe_to_parquet, get_files_by_extension,
                               init_spark)
@@ -21,16 +19,16 @@ FILE_TO_PROCESS = "events.jsonl"
 PATH_TO_SAVE = "events"
 
 
-def events_processing_pipeline(spark: SparkSession, logger: logging):
+def events_processing_pipeline(spark: SparkSession):
     logger.info("Starts processing json")
-    df = dataframe_from_json(spark, LOCAL_FOLDER, FILE_TO_PROCESS, logger)
-    df = clean_transform_df(df, logger)
-    dataframe_to_parquet(df, LOCAL_FOLDER, PATH_TO_SAVE, logger)
+    df = dataframe_from_json(spark, LOCAL_FOLDER, FILE_TO_PROCESS)
+    df = clean_transform_df(df)
+    dataframe_to_parquet(df, LOCAL_FOLDER, PATH_TO_SAVE)
 
 
-def events_processing_pipeline_rdd(spark: SparkSession, logger: logging):
+def events_processing_pipeline_rdd(spark: SparkSession):
     logger.info("Starts processing JSON")
-    rdd_dataframe = dataframe_from_json(spark, LOCAL_FOLDER, FILE_TO_PROCESS, logger)
+    rdd_dataframe = dataframe_from_json(spark, LOCAL_FOLDER, FILE_TO_PROCESS)
 
     logger.info("Converting to rdd")
     rdd_dataframe = rdd_dataframe.rdd
@@ -64,19 +62,16 @@ def events_processing_pipeline_rdd(spark: SparkSession, logger: logging):
     df = rdd_df.toDF()
 
     df.show(truncate=False)
-    dataframe_to_parquet(df, LOCAL_FOLDER, PATH_TO_SAVE, logger)
+    dataframe_to_parquet(df, LOCAL_FOLDER, PATH_TO_SAVE)
 
 
 def main():
-    logger = my_logger()
-    client = storage.Client()
-
-    gcs = GCStorage(client, logger)
+    gcs = GCStorage()
     bucket = gcs.create_bucket(BUCKET_NAME)
 
     spark = init_spark()
-    events_processing_pipeline(spark, logger)
-    events_processing_pipeline_rdd(spark, logger)
+    events_processing_pipeline(spark)
+    events_processing_pipeline_rdd(spark)
 
     parquet_files = get_files_by_extension(LOCAL_FOLDER, logger, "parquet")
     gcs.upload_files(bucket, parquet_files, by_folder=True)

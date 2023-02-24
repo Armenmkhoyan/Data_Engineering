@@ -1,11 +1,10 @@
-import logging
 import os
 from datetime import datetime
 
 from pyspark.sql.functions import col, count, DataFrame
 from pyspark.sql.session import SparkSession
 
-from logger import my_logger
+from logger import logger
 from spark_processors import (
     clean_transform_df,
     dataframe_from_csv,
@@ -23,30 +22,29 @@ PARTNERS = "partners.csv"
 VIDEOS = "videos.csv"
 
 
-def analytics_processing(spark: SparkSession, logger: logging):
+def analytics_processing(spark: SparkSession):
 
     start_date = parse_date("1990-01-01")
     end_date = datetime.now()
 
-    events = dataframe_from_json(spark, LOCAL_FOLDER, EVENTS, logger)
-    events = clean_transform_df(events, logger)
+    events = dataframe_from_json(spark, LOCAL_FOLDER, EVENTS)
+    events = clean_transform_df(events)
 
-    users = dataframe_from_csv(spark, LOCAL_FOLDER, USERS, logger)
-    users = validate_dataframe(users, logger)
+    users = dataframe_from_csv(spark, LOCAL_FOLDER, USERS)
+    users = validate_dataframe(users)
 
-    videos = dataframe_from_csv(spark, LOCAL_FOLDER, VIDEOS, logger)
-    videos = validate_dataframe(videos, logger)
+    videos = dataframe_from_csv(spark, LOCAL_FOLDER, VIDEOS)
+    videos = validate_dataframe(videos)
 
-    partners = dataframe_from_csv(spark, LOCAL_FOLDER, PARTNERS, logger)
-    partners = validate_dataframe(partners, logger)
+    partners = dataframe_from_csv(spark, LOCAL_FOLDER, PARTNERS)
+    partners = validate_dataframe(partners)
 
-    top_users = top_n_users(events, users, start_date, end_date, logger)
+    top_users = top_n_users(events, users, start_date, end_date)
     top_partners = top_n_partners(
-        events, videos, partners, start_date, end_date, logger
+        events, videos, partners, start_date, end_date
     )
     most_engaged = most_engaged_video_by_partners(
-        events, videos, partners, start_date, end_date, "like", logger
-    )
+        events, videos, partners, start_date, end_date, "like")
     top_users.write.csv(os.path.join(LOCAL_FOLDER, "top_users"), mode="overwrite")
     top_partners.write.csv(os.path.join(LOCAL_FOLDER, "top_partners"), mode="overwrite")
     most_engaged.write.csv(os.path.join(LOCAL_FOLDER, "most_engaged_videos"), mode="overwrite")
@@ -59,8 +57,7 @@ def most_engaged_video_by_partners(
     start_date: datetime,
     end_date: datetime,
     key: str,
-    logger: logging,
-) -> DataFrame:
+   ) -> DataFrame:
 
     logger.info("Most liked, disliked video by partners and time markers")
 
@@ -76,6 +73,7 @@ def most_engaged_video_by_partners(
         .join(partners, videos["partner_id"] == partners["id"], "left")
         .drop("id")
     )
+    most_engaged.show()
     return most_engaged
 
 
@@ -85,7 +83,6 @@ def top_n_partners(
     partners: DataFrame,
     start_date: datetime,
     end_date: datetime,
-    logger: logging,
 ) -> DataFrame:
 
     logger.info("Top N partners by time marker")
@@ -110,6 +107,7 @@ def top_n_partners(
             "event_count",
         )
     )
+    top_partners.show()
     return top_partners
 
 
@@ -118,7 +116,6 @@ def top_n_users(
     users: DataFrame,
     start_date: datetime,
     end_date: datetime,
-    logger: logging,
 ) -> DataFrame:
 
     logger.info("Top N users by time markers")
@@ -133,10 +130,10 @@ def top_n_users(
         .join(users, events["user_id"] == users["id"], "left")
         .select("id", "fname", "lname", "email", "event_count")
     )
+    top_n_workers.show()
     return top_n_workers
 
 
 if __name__ == "__main__":
-    my_logger = my_logger()
     spark_session = init_spark()
-    analytics_processing(spark_session, my_logger)
+    analytics_processing(spark_session)
