@@ -1,10 +1,14 @@
 import os
+from typing import List
 
 from google.cloud import storage
-from logger import logger
-os.environ[
-    "GOOGLE_APPLICATION_CREDENTIALS"
-] = "json_key/data-n-analytics-edu-345714-658a4f6e1c6d.json"
+from schema_and_structures.elt_logger import logger
+
+json_key_path = "/opt/airflow/dags/json_key/data-n-analytics-edu-345714-658a4f6e1c6d.json"
+json_key_path = json_key_path if os.path.isfile(json_key_path) else \
+    "/home/universe.dart.spb/amkhoyan/Documents/DataEngeener/TASKS/" \
+    "data_processing_and_analytics/json_key/data-n-analytics-edu-345714-658a4f6e1c6d.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = json_key_path
 
 
 class GCStorage:
@@ -51,22 +55,7 @@ class GCStorage:
             blob.upload_from_filename(file)
 
     @staticmethod
-    def get_files(bucket: str, file_extension: str = "") -> list[str]:
+    def get_files(bucket: str, file_extension: str = "") -> List[str]:
         logger.info("Getting all files from bucket by extension")
         bucket = GCStorage.client.get_bucket(bucket)
-        files = [blob.name for blob in bucket.list_blobs() if blob.name.endswith(file_extension)]
-        return files
-
-    def move_files(self, source_bucket: str, destination_bucket: str) -> None:
-        logger.info("Moving files in bucket")
-
-        source = self.client.get_bucket(source_bucket)
-        if not self.is_bucket_exist(destination_bucket):
-            self.create_bucket(destination_bucket)
-
-        for obj in source.list_blobs():
-            new_obj = source.copy_blob(obj, self.client.bucket(destination_bucket), obj.name)
-            logger.info(f"Moving file: {obj.name} to {destination_bucket} bucket")
-            obj.delete()
-
-        logger.info("All files Moved successfully.")
+        return [blob.name for blob in bucket.list_blobs() if blob.name.endswith(file_extension)]

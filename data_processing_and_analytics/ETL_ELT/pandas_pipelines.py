@@ -4,10 +4,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from pandas_processors import df_from_file
-from validators import is_element_of_list_in_text
+from validators_and_processors.pandas_processors import df_from_file
+from validators_and_processors.validators import is_element_of_list_in_text
 
-LOCAL_FOLDER = "data"
+LOCAL_FOLDER = "/home/universe.dart.spb/amkhoyan/Documents/DataEngeener/TASKS/data_processing_and_analytics/data/pandas"
 EVENTS = "events.jsonl"
 USERS = "users.csv"
 VIDEOS = 'videos.csv'
@@ -50,7 +50,9 @@ def video_likes_rate_by_tags(events: pd.DataFrame, users: pd.DataFrame, videos: 
 
 
 def main():
+    print(os.path.isfile(os.path.join(LOCAL_FOLDER, EVENTS)))
     events = df_from_file(os.path.join(LOCAL_FOLDER, EVENTS))
+
     users = df_from_file(os.path.join(LOCAL_FOLDER, USERS))
     videos = df_from_file(os.path.join(LOCAL_FOLDER, VIDEOS))
 

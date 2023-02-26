@@ -1,20 +1,16 @@
-import os
-
 from pyspark.sql import SparkSession
 
-from gcp_model import GCStorage
-from logger import logger
-from spark_processors import (clean_transform_df, dataframe_from_json,
-                              dataframe_to_parquet, get_files_by_extension,
-                              init_spark)
-from utils import convert_timestamp, del_elem_by_key, set_element_to_none
-
-os.environ[
-    "GOOGLE_APPLICATION_CREDENTIALS"
-] = "json_key/data-n-analytics-edu-345714-658a4f6e1c6d.json"
+from schema_and_structures.elt_logger import logger
+from utils.gcp_model import GCStorage
+from utils.utils import convert_timestamp, del_elem_by_key, set_element_to_none
+from validators_and_processors.spark_processors import (clean_transform_df,
+                                                        dataframe_from_json,
+                                                        dataframe_to_parquet,
+                                                        get_files_by_extension,
+                                                        init_spark)
 
 BUCKET_NAME = "processed_parquet_job_2"
-LOCAL_FOLDER = "data"
+LOCAL_FOLDER = "/home/universe.dart.spb/amkhoyan/Documents/DataEngeener/TASKS/data_processing_and_analytics/data/pandas"
 FILE_TO_PROCESS = "events.jsonl"
 PATH_TO_SAVE = "events"
 

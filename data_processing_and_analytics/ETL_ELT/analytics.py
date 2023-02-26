@@ -1,18 +1,16 @@
 import os
 from datetime import datetime
 
-from pyspark.sql.functions import col, count, DataFrame
+from pyspark.sql.functions import DataFrame, col, count
 from pyspark.sql.session import SparkSession
 
-from logger import logger
-from spark_processors import (
-    clean_transform_df,
-    dataframe_from_csv,
-    dataframe_from_json,
-    init_spark,
-    validate_dataframe,
-)
-from utils import parse_date
+from schema_and_structures.elt_logger import logger
+from utils.utils import parse_date
+from validators_and_processors.spark_processors import (clean_transform_df,
+                                                        dataframe_from_csv,
+                                                        dataframe_from_json,
+                                                        init_spark,
+                                                        validate_dataframe)
 
 LOCAL_FOLDER = "data"
 EVENTS = "events.jsonl"

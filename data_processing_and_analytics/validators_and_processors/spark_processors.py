@@ -7,9 +7,9 @@ from pyspark.sql import DataFrame
 from pyspark.sql.functions import col, udf
 from pyspark.sql.session import SparkSession
 
-from logger import logger
-from validators import (is_digit, is_valid_address, is_valid_coordinate,
-                        is_valid_email, is_valid_text, is_validate_url)
+from schema_and_structures.elt_logger import logger
+from validators_and_processors.validators import is_digit, is_valid_address, is_valid_coordinate, is_valid_email, \
+    is_valid_text, is_validate_url
 
 FIELDS_TO_VALIDATE = {
     "id": is_digit,

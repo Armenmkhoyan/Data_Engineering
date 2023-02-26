@@ -1,24 +1,20 @@
-import os
-
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, udf
 
-from gcp_model import GCStorage
-from logger import logger
-from spark_processors import (dataframe_from_csv, dataframe_to_parquet,
-                              get_files_by_extension, init_spark)
-from validators import is_valid_email, is_valid_text
+from schema_and_structures.elt_logger import logger
+from utils.gcp_model import GCStorage
+from validators_and_processors.spark_processors import (dataframe_from_csv,
+                                                        dataframe_to_parquet,
+                                                        get_files_by_extension,
+                                                        init_spark)
+from validators_and_processors.validators import is_valid_email, is_valid_text
 
-os.environ[
-    "GOOGLE_APPLICATION_CREDENTIALS"
-] = "json_key/data-n-analytics-edu-345714-658a4f6e1c6d.json"
-
-BUCKET_NAME = "processed_parquet_job_2"
-LOCAL_FOLDER = "data"
+LOCAL_FOLDER = "/home/universe.dart.spb/amkhoyan/Documents/DataEngeener/TASKS/data_processing_and_analytics/data/pandas"
 FILE_TO_PROCESS = "users.csv"
 VALID_PARQUET_FOLDER = "valid"
 INVALID_PARQUET_FOLDER = "invalid"
 VALID_PARQUET_RDD_FOLDER = "valid_rdd"
+BUCKET_NAME = "processed_parquet_job_2"
 INVALID_PARQUET_RDD_FOLDER = "invalid_rdd"
 
 
